@@ -4,6 +4,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocolException;
+import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.protocol.TSimpleJSONProtocol;
 import org.apache.thrift.protocol.TList;
 import org.apache.thrift.protocol.TMap;
@@ -27,6 +28,22 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 public class HumanReadableJsonProtocol extends TProtocol {
+
+    public static class Factory implements TProtocolFactory {
+
+        private JSONArray metadata;
+        private String service;
+
+        public Factory(JSONArray metadata, String service) {
+            this.metadata = metadata;
+            this.service = service;
+        }
+
+        @Override
+        public TProtocol getProtocol(TTransport transport) {
+            return new HumanReadableJsonProtocol(transport, metadata, service);
+        }
+    }
 
     private static final String METHOD_KEY = "method";
     private static final String SERVICES_KEY = "services";
@@ -124,7 +141,7 @@ public class HumanReadableJsonProtocol extends TProtocol {
     }
 
     private JSONObject getInfo(String clazz) throws JSONException {
-        String[] parts = clazz.split(".");
+        String[] parts = clazz.split("\\.");
         JSONObject program = findInJsonArray(metadata, NAME_KEY, parts[0]);
         return findInJsonArray(program.getJSONArray(STRUCTS_KEY), NAME_KEY, parts[1]);
     }
@@ -246,10 +263,10 @@ public class HumanReadableJsonProtocol extends TProtocol {
             }
 
             byte fieldType = stringToTypeId(fieldInfo.getString(TYPE_ID_KEY));
-            add(key, fieldType, fieldInfo.optInt(KEY_KEY, 0));
+            add(key, fieldType, (short) fieldInfo.optInt(KEY_KEY, 0));
             parse(fieldInfo, value, TYPE_ID_KEY, TYPE_KEY);
-            add("", TType.STOP, -1);
         }
+        add("", TType.STOP, (short) -1);
     }
 
     private byte stringToTypeId(String fieldType) throws TProtocolException {
@@ -330,14 +347,14 @@ public class HumanReadableJsonProtocol extends TProtocol {
 
         if (request.has(ARGUMENTS_KEY)) {
             if (methodInfo == null) {
-                add("", TType.STOP, -1);
+                add("", TType.STOP, (short) -1);
                 return new TMessage(name, typeId, seqId);
             }
 
             parseStruct(methodInfo.getJSONArray(ARGUMENTS_KEY), request.get(ARGUMENTS_KEY));
         } else if (request.has(RESULT_KEY)) {
             if (methodInfo == null) {
-                add("", TType.STOP, -1);
+                add("", TType.STOP, (short) -1);
                 return new TMessage(name, typeId, seqId);
             }
 
@@ -345,14 +362,14 @@ public class HumanReadableJsonProtocol extends TProtocol {
             if (result.has(SUCCESS_KEY)) {
                 try {
                     byte returnType = stringToTypeId(methodInfo.getString(RETURN_TYPE_ID_KEY));
-                    add("", returnType, 0);
+                    add("", returnType, (short) 0);
                     parse(methodInfo, result.get(SUCCESS_KEY), RETURN_TYPE_ID_KEY, RETURN_TYPE_KEY);
-                    add("", TType.STOP, -1);
+                    add("", TType.STOP, (short) -1);
                 } catch (Exception e) {
                     err = new TException(e);
                 }
             } else if (result.length() == 0) {
-                add("", TType.STOP, -1);
+                add("", TType.STOP, (short) -1);
             } else {
                 String errName = result.keys().next();
                 JSONObject errInfo =
@@ -361,21 +378,21 @@ public class HumanReadableJsonProtocol extends TProtocol {
                     throw new TProtocolException(TProtocolException.INVALID_DATA,
                             new Exception("Unable to parse result"));
                 }
-                add(errName, TType.STRUCT, errInfo.getInt(KEY_KEY));
+                add(errName, TType.STRUCT, (short) errInfo.getInt(KEY_KEY));
 
                 try {
                     parse(errInfo, result.get(errName), TYPE_ID_KEY, TYPE_KEY);
                 } catch (Exception e) {
                     err = new TException(e);
                 }
-                add("", TType.STOP, -1);
+                add("", TType.STOP, (short) -1);
             }
         } else if (request.has(EXCEPTION_KEY)) {
-            add("", TType.STRING, 1);
+            add("", TType.STRING, (short) 1);
             add(request.getJSONObject(EXCEPTION_KEY).optString(MESSAGE_KEY, ""));
-            add("", TType.I32, 2);
+            add("", TType.I32, (short) 2);
             add(request.getJSONObject(EXCEPTION_KEY).optInt(TYPE_KEY, TProtocolException.UNKNOWN));
-            add("", TType.STOP, -1);
+            add("", TType.STOP, (short) -1);
         } else {
             throw new TProtocolException(TProtocolException.INVALID_DATA,
                     new Exception("Unable to parse result"));
