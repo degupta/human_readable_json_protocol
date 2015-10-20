@@ -1,11 +1,11 @@
 package com.devansh.thrift;
 
+
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.protocol.TSimpleJSONProtocol;
 import org.apache.thrift.protocol.TList;
 import org.apache.thrift.protocol.TMap;
 import org.apache.thrift.protocol.TMessage;
