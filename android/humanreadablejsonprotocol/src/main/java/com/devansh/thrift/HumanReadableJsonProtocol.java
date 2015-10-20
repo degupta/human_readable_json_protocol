@@ -68,8 +68,8 @@ public class HumanReadableJsonProtocol extends TProtocol {
         oprot = new TSimpleJSONProtocol(transport);
     }
 
-    private JSONObject find_in_json_array(JSONArray arr, String key,
-                                          String value) throws JSONException {
+    private JSONObject findInJsonArray(JSONArray arr, String key,
+                                       String value) throws JSONException {
         for (int i = 0; i < arr.length(); i++) {
             JSONObject obj = arr.getJSONObject(i);
             if (value.equals(obj.getString(key))) {
@@ -80,19 +80,17 @@ public class HumanReadableJsonProtocol extends TProtocol {
         return null;
     }
 
-    private JSONObject get_method_info(String service_name,
-                                       String method_name) throws JSONException {
+    private JSONObject getMethodInfo(String serviceName, String methodName) throws JSONException {
         for (int i = 0; i < metadata.length(); i++) {
             JSONObject v = metadata.getJSONObject(i);
             if (v.has(SERVICES_KEY)) {
-                JSONObject svc = find_in_json_array(v.getJSONArray(SERVICES_KEY), NAME_KEY,
-                        v.getString(NAME_KEY) + "." + service_name);
+                JSONObject svc = findInJsonArray(v.getJSONArray(SERVICES_KEY), NAME_KEY,
+                        v.getString(NAME_KEY) + "." + serviceName);
                 if (svc != null) {
-                    JSONObject method_info =
-                            find_in_json_array(svc.getJSONArray(FUNCTIONS_KEY), NAME_KEY,
-                                    method_name);
-                    if (method_info != null) {
-                        return method_info;
+                    JSONObject methodInfo =
+                            findInJsonArray(svc.getJSONArray(FUNCTIONS_KEY), NAME_KEY, methodName);
+                    if (methodInfo != null) {
+                        return methodInfo;
                     }
                 }
             }
@@ -101,10 +99,10 @@ public class HumanReadableJsonProtocol extends TProtocol {
         return null;
     }
 
-    private byte[] get_message_type_and_seq(JSONObject request,
-                                            JSONObject method_info) throws TProtocolException {
+    private byte[] getMessageTypeAndSeq(JSONObject request,
+                                        JSONObject methodInfo) throws TProtocolException {
         if (request.has(ARGUMENTS_KEY)) {
-            if (method_info != null && method_info.has((ONEWAY_KEY))) {
+            if (methodInfo != null && methodInfo.has((ONEWAY_KEY))) {
                 return new byte[] { TMessageType.ONEWAY, 0 };
             } else {
                 return new byte[] { TMessageType.CALL, 0 };
@@ -125,32 +123,32 @@ public class HumanReadableJsonProtocol extends TProtocol {
         }
     }
 
-    private JSONObject get_info(String clazz) throws JSONException {
+    private JSONObject getInfo(String clazz) throws JSONException {
         String[] parts = clazz.split(".");
-        JSONObject program = find_in_json_array(metadata, NAME_KEY, parts[0]);
-        return find_in_json_array(program.getJSONArray(STRUCTS_KEY), NAME_KEY, parts[1]);
+        JSONObject program = findInJsonArray(metadata, NAME_KEY, parts[0]);
+        return findInJsonArray(program.getJSONArray(STRUCTS_KEY), NAME_KEY, parts[1]);
     }
 
-    private JSONArray get_struct_field_list(JSONObject elem_type) throws JSONException {
-        return get_info(elem_type.getString(CLASS_KEY)).getJSONArray(FIELDS_KEY);
+    private JSONArray getStructFieldList(JSONObject elemType) throws JSONException {
+        return getInfo(elemType.getString(CLASS_KEY)).getJSONArray(FIELDS_KEY);
     }
 
-    private void raise_expected(String type, Object got) throws TProtocolException {
+    private void raiseExpected(String type, Object got) throws TProtocolException {
         throw new TProtocolException(TProtocolException.INVALID_DATA, new Exception(
                 "Expected " + type + " got " +
                         (got == null ? "null" : got.getClass().getSimpleName())));
     }
 
-    private void parse(JSONObject field_info, Object value, String field_type_id_key,
-                       String field_type_key) throws JSONException, TProtocolException {
-        String field_type = field_info.getString(field_type_id_key);
+    private void parse(JSONObject fieldInfo, Object value, String fieldTypeIdKey,
+                       String fieldTypeKey) throws JSONException, TProtocolException {
+        String fieldType = fieldInfo.getString(fieldTypeIdKey);
 
-        switch (field_type) {
+        switch (fieldType) {
             case "bool":
                 if (value instanceof Boolean) {
                     add(value);
                 } else {
-                    raise_expected("bool", value);
+                    raiseExpected("bool", value);
                 }
                 break;
 
@@ -162,7 +160,7 @@ public class HumanReadableJsonProtocol extends TProtocol {
                 if (value instanceof Number) {
                     add(value);
                 } else {
-                    raise_expected(field_type, value);
+                    raiseExpected(fieldType, value);
                 }
                 break;
 
@@ -170,71 +168,70 @@ public class HumanReadableJsonProtocol extends TProtocol {
                 if (value instanceof String) {
                     add(value);
                 } else {
-                    raise_expected("string", value);
+                    raiseExpected("string", value);
                 }
                 break;
 
             case "struct":
             case "union":
             case "exception":
-                parse_struct(get_struct_field_list(field_info.getJSONObject(field_type_key)),
-                        value);
+                parseStruct(getStructFieldList(fieldInfo.getJSONObject(fieldTypeKey)), value);
                 break;
 
             case "map":
-                parse_map(field_info.getJSONObject(field_type_key), value);
+                parseMap(fieldInfo.getJSONObject(fieldTypeKey), value);
                 break;
 
             case "set":
             case "list":
-                parse_list(field_info.getJSONObject(field_type_key), value);
+                parseList(fieldInfo.getJSONObject(fieldTypeKey), value);
                 break;
 
             default:
                 throw new TProtocolException(TProtocolException.INVALID_DATA,
-                        new Exception("Unexpected type " + field_type));
+                        new Exception("Unexpected type " + fieldType));
         }
     }
 
-    private void parse_map(JSONObject field_info,
-                           Object request) throws TProtocolException, JSONException {
+    private void parseMap(JSONObject fieldInfo,
+                          Object request) throws TProtocolException, JSONException {
         if (!(request instanceof JSONObject)) {
-            raise_expected("JSON Object", request);
+            raiseExpected("JSON Object", request);
         }
         JSONObject jsonObject = (JSONObject) request;
 
-        byte key_type = string_to_type_id(field_info.getString(KEY_TYPE_ID_KEY));
-        byte value_type = string_to_type_id(field_info.getString(VALUE_TYPE_ID_KEY));
-        add(key_type, value_type, jsonObject.length());
+        byte keyType = stringToTypeId(fieldInfo.getString(KEY_TYPE_ID_KEY));
+        byte valueType = stringToTypeId(fieldInfo.getString(VALUE_TYPE_ID_KEY));
+        add(keyType, valueType, jsonObject.length());
 
         Iterator<String> it = jsonObject.keys();
         while (it.hasNext()) {
             String key = it.next();
             Object value = jsonObject.get(key);
-            parse(field_info, key, KEY_TYPE_ID_KEY, KEY_TYPE_KEY);
-            parse(field_info, value, VALUE_TYPE_ID_KEY, VALUE_TYPE_KEY);
+            parse(fieldInfo, key, KEY_TYPE_ID_KEY, KEY_TYPE_KEY);
+            parse(fieldInfo, value, VALUE_TYPE_ID_KEY, VALUE_TYPE_KEY);
         }
     }
 
-    private void parse_list(JSONObject field_info,
-                            Object request) throws TProtocolException, JSONException {
+    private void parseList(JSONObject fieldInfo,
+                           Object request) throws TProtocolException, JSONException {
         if (!(request instanceof JSONArray)) {
-            raise_expected("JSON Array", request);
+            raiseExpected("JSON Array", request);
         }
         JSONArray jsonArray = (JSONArray) request;
 
-        byte elem_type = string_to_type_id(field_info.getString(ELEM_TYPE_ID_KEY));
-        add(elem_type, jsonArray.length());
+        byte elemType = stringToTypeId(fieldInfo.getString(ELEM_TYPE_ID_KEY));
+        add(elemType, jsonArray.length());
 
         for (int i = 0; i < jsonArray.length(); i++) {
-            parse(field_info, jsonArray.get(i), ELEM_TYPE_ID_KEY, ELEM_TYPE_KEY);
+            parse(fieldInfo, jsonArray.get(i), ELEM_TYPE_ID_KEY, ELEM_TYPE_KEY);
         }
     }
 
-    public void parse_struct(JSONArray fields_list,
-                             Object request) throws TProtocolException, JSONException {
+    public void parseStruct(JSONArray fieldsList,
+                            Object request) throws TProtocolException, JSONException {
         if (!(request instanceof JSONObject)) {
-            raise_expected("JSON Object", request);
+            raiseExpected("JSON Object", request);
         }
         JSONObject jsonObject = (JSONObject) request;
 
@@ -242,21 +239,21 @@ public class HumanReadableJsonProtocol extends TProtocol {
         while (it.hasNext()) {
             String key = it.next();
             Object value = jsonObject.get(key);
-            JSONObject field_info = find_in_json_array(fields_list, NAME_KEY, key);
-            if (field_info == null) {
+            JSONObject fieldInfo = findInJsonArray(fieldsList, NAME_KEY, key);
+            if (fieldInfo == null) {
                 throw new TProtocolException(TProtocolException.INVALID_DATA,
                         new Exception("Unexpected key " + key));
             }
 
-            byte field_type = string_to_type_id(field_info.getString(TYPE_ID_KEY));
-            add(key, field_type, field_info.optInt(KEY_KEY, 0));
-            parse(field_info, value, TYPE_ID_KEY, TYPE_KEY);
+            byte fieldType = stringToTypeId(fieldInfo.getString(TYPE_ID_KEY));
+            add(key, fieldType, fieldInfo.optInt(KEY_KEY, 0));
+            parse(fieldInfo, value, TYPE_ID_KEY, TYPE_KEY);
             add("", TType.STOP, -1);
         }
     }
 
-    private byte string_to_type_id(String field_type) throws TProtocolException {
-        switch (field_type) {
+    private byte stringToTypeId(String fieldType) throws TProtocolException {
+        switch (fieldType) {
             case "bool":
                 return TType.BOOL;
             case "i8":
@@ -283,7 +280,7 @@ public class HumanReadableJsonProtocol extends TProtocol {
                 return TType.LIST;
             default:
                 throw new TProtocolException(TProtocolException.INVALID_DATA,
-                        new Exception("Unknown type identifier " + field_type));
+                        new Exception("Unknown type identifier " + fieldType));
         }
     }
 
@@ -297,8 +294,6 @@ public class HumanReadableJsonProtocol extends TProtocol {
     }
 
     private TMessage readMessageBeginHelper() throws JSONException, TProtocolException, IOException {
-        String s = null;
-
         StringWriter writer = new StringWriter();
         char[] buffer = new char[1028];
         InputStreamReader input = new InputStreamReader(new InputStream() {
@@ -328,31 +323,30 @@ public class HumanReadableJsonProtocol extends TProtocol {
         JSONObject request = new JSONObject(writer.toString());
 
         String name = request.getString(METHOD_KEY);
-        JSONObject method_info = get_method_info(service, name);
-        byte[] message_type_and_seq = get_message_type_and_seq(request, method_info);
-        byte type_id = message_type_and_seq[0];
-        byte seq_id = message_type_and_seq[1];
+        JSONObject methodInfo = getMethodInfo(service, name);
+        byte[] messageTypeAndSeq = getMessageTypeAndSeq(request, methodInfo);
+        byte typeId = messageTypeAndSeq[0];
+        byte seqId = messageTypeAndSeq[1];
 
         if (request.has(ARGUMENTS_KEY)) {
-            if (method_info == null) {
+            if (methodInfo == null) {
                 add("", TType.STOP, -1);
-                return new TMessage(name, type_id, seq_id);
+                return new TMessage(name, typeId, seqId);
             }
 
-            parse_struct(method_info.getJSONArray(ARGUMENTS_KEY), request.get(ARGUMENTS_KEY));
+            parseStruct(methodInfo.getJSONArray(ARGUMENTS_KEY), request.get(ARGUMENTS_KEY));
         } else if (request.has(RESULT_KEY)) {
-            if (method_info == null) {
+            if (methodInfo == null) {
                 add("", TType.STOP, -1);
-                return new TMessage(name, type_id, seq_id);
+                return new TMessage(name, typeId, seqId);
             }
 
             JSONObject result = request.getJSONObject(RESULT_KEY);
             if (result.has(SUCCESS_KEY)) {
                 try {
-                    byte return_type = string_to_type_id(method_info.getString(RETURN_TYPE_ID_KEY));
-                    add("", return_type, 0);
-                    parse(method_info, result.get(SUCCESS_KEY), RETURN_TYPE_ID_KEY,
-                            RETURN_TYPE_KEY);
+                    byte returnType = stringToTypeId(methodInfo.getString(RETURN_TYPE_ID_KEY));
+                    add("", returnType, 0);
+                    parse(methodInfo, result.get(SUCCESS_KEY), RETURN_TYPE_ID_KEY, RETURN_TYPE_KEY);
                     add("", TType.STOP, -1);
                 } catch (Exception e) {
                     err = new TException(e);
@@ -360,18 +354,17 @@ public class HumanReadableJsonProtocol extends TProtocol {
             } else if (result.length() == 0) {
                 add("", TType.STOP, -1);
             } else {
-                String err_name = result.keys().next();
-                JSONObject err_info =
-                        find_in_json_array(method_info.getJSONArray(EXCEPTIONS_KEY), NAME_KEY,
-                                err_name);
-                if (err_info == null) {
+                String errName = result.keys().next();
+                JSONObject errInfo =
+                        findInJsonArray(methodInfo.getJSONArray(EXCEPTIONS_KEY), NAME_KEY, errName);
+                if (errInfo == null) {
                     throw new TProtocolException(TProtocolException.INVALID_DATA,
                             new Exception("Unable to parse result"));
                 }
-                add(err_name, TType.STRUCT, err_info.getInt(KEY_KEY));
+                add(errName, TType.STRUCT, errInfo.getInt(KEY_KEY));
 
                 try {
-                    parse(err_info, result.get(err_name), TYPE_ID_KEY, TYPE_KEY);
+                    parse(errInfo, result.get(errName), TYPE_ID_KEY, TYPE_KEY);
                 } catch (Exception e) {
                     err = new TException(e);
                 }
@@ -388,7 +381,7 @@ public class HumanReadableJsonProtocol extends TProtocol {
                     new Exception("Unable to parse result"));
         }
 
-        return new TMessage(name, type_id, seq_id);
+        return new TMessage(name, typeId, seqId);
     }
 
     @Override
