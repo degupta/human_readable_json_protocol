@@ -1,4 +1,7 @@
-class WIJSONProtocol < Thrift::BaseProtocol
+require 'thrift'
+require 'json'
+
+class WIJsonProtocol < Thrift::BaseProtocol
   METHOD_KEY         = "method"
   SERVICES_KEY       = "services"
   NAME_KEY           = "name"
@@ -25,20 +28,27 @@ class WIJSONProtocol < Thrift::BaseProtocol
   RETURN_TYPE_ID_KEY = "returnTypeId"
   RETURN_TYPE_KEY    = "returnType"
 
-  JSON_DIR = "#{File.dirname(__FILE__)}/../gen-json"
-  @@packages_metadata = []
-  Dir.foreach(JSON_DIR) do |fname|
-    if fname.end_with? ".json"
-      @@packages_metadata << JSON.parse(File.read("#{JSON_DIR}/#{fname}"))
+  class WIJsonProtocolFactory < Thrift::BaseProtocolFactory
+    def initialize(dir)
+      @packages_metadata = []
+      Dir.foreach(dir) do |fname|
+        if fname.end_with? ".json"
+          @packages_metadata << JSON.parse(File.read("#{dir}/#{fname}"))
+        end
+      end
+    end
+
+    def get_protocol(trans, service, debug = false)
+      WIJsonProtocol.new(trans, service, @packages_metadata, debug)
     end
   end
 
   attr_accessor :metadata
 
-  def initialize(protocol, service, debug = false)
+  def initialize(protocol, service, packages_metadata, debug = false)
     super(protocol)
     @oprot = Thrift::JsonProtocol.new(protocol)
-    @metadata = @@packages_metadata
+    @metadata = packages_metadata
     @service = service
     @params = []
     @err = nil
