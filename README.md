@@ -1,6 +1,31 @@
 # Human Readable Json Protocol
 A way to convert Thrift Services and Functions into Human Readable JSON
 
+For a simple Thrift service like so:
+
+```
+exception SystemException {
+  1: i32 errorCode,
+  2: string message,
+}
+
+struct User {
+  1: string id,
+  2: string email,
+  3: string name,
+  4: i64 validatedAt
+}
+
+struct LoginResult {
+  1: string authToken,
+  2: User currentUser
+}
+
+service AuthenticationService {
+  LoginResult login(1: string email, 2: string password) throws(1: SystemException err)
+}
+```
+
 Basic Format of the request:
 ```json
 {
@@ -20,8 +45,7 @@ Example:
 }
 ```
 
-The arguments and the names have to match up exactly as specified in the
-Thrift definition files.
+**_The arguments and the names have to match up exactly as specified in the Thrift definition files._**
 
 Basic format of the response
 ```json
@@ -30,6 +54,7 @@ Basic format of the response
   "result|exception": { ... }
 }
 ```
+**_Note that the JSON objects have keys whose names are the same as that of fields in the struct defined in Thrift_**
 
 Example:
 ```json
@@ -49,7 +74,8 @@ Example:
 }
 ```
 
-If there was an error thrown which was defined in the method definition
+
+**_If there was an error thrown which was defined in the method definition_**
 ```json
 {
     "method": "login",
