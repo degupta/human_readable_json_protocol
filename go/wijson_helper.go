@@ -11,17 +11,17 @@ import (
 func (protocol *WIJSONProtocol) getMethodInfo(serviceName, methodName string) (Object, error) {
 	for _, v := range protocol.metadata {
 		// For each package in the metadata
-		pkg, ok := ToJsonCheck(v)
+		pkg, ok := toJsonCheck(v)
 		if !ok {
 			continue
 		}
 		// check if it has any services
-		if svcs, err := pkg.GetArrayValSafe(servicesKey); err == nil {
+		if svcs, err := pkg.getArrayValSafe(servicesKey); err == nil {
 			// check if it has the service we are looking for
-			svc := svcs.FindInJsonArray(nameKey, pkg.GetStringVal(nameKey)+"."+serviceName)
+			svc := svcs.findInJsonArray(nameKey, pkg.getStringVal(nameKey)+"."+serviceName)
 			if svc != nil {
 				// check if it has the method we are looking for
-				methodInfo := svc.GetArrayVal(functionsKey).FindInJsonArray(nameKey, methodName)
+				methodInfo := svc.getArrayVal(functionsKey).findInJsonArray(nameKey, methodName)
 				if methodInfo != nil {
 					return methodInfo, nil
 				}
@@ -36,14 +36,14 @@ func (protocol *WIJSONProtocol) getMethodInfo(serviceName, methodName string) (O
 func (protocol *WIJSONProtocol) getInfo(class string) Object {
 	parts := strings.Split(class, ".")
 	// Find the package we are looking for
-	program := protocol.metadata.FindInJsonArray(nameKey, parts[0])
+	program := protocol.metadata.findInJsonArray(nameKey, parts[0])
 	// In the structs array, check if the struct we are looking for exists
-	return program.GetArrayVal(structsKey).FindInJsonArray(nameKey, parts[1])
+	return program.getArrayVal(structsKey).findInJsonArray(nameKey, parts[1])
 }
 
 func (protocol *WIJSONProtocol) getStructFieldList(elemType Object) Array {
 	// Get the struct we are looking for and then get the list of fields in the struct
-	return protocol.getInfo(elemType.GetStringVal(classKey)).GetArrayVal(fieldsKey)
+	return protocol.getInfo(elemType.getStringVal(classKey)).getArrayVal(fieldsKey)
 }
 
 /**
@@ -59,7 +59,7 @@ func (protocol *WIJSONProtocol) parse(fieldInfo Object, value interface{}, field
 	// Get the type of the value we expect
 	// Check if value is of that type
 	// and then add it to the list of arguments
-	fieldType := fieldInfo.GetStringVal(fieldTypeIdKey)
+	fieldType := fieldInfo.getStringVal(fieldTypeIdKey)
 
 	switch fieldType {
 	case "bool":
@@ -126,30 +126,30 @@ func (protocol *WIJSONProtocol) parse(fieldInfo Object, value interface{}, field
 		}
 
 	case "struct", "union", "exception":
-		return protocol.parseStruct(protocol.getStructFieldList(fieldInfo.GetJsonVal(fieldTypeKey)), value)
+		return protocol.parseStruct(protocol.getStructFieldList(fieldInfo.getJsonVal(fieldTypeKey)), value)
 
 	case "map":
-		return protocol.parseMap(fieldInfo.GetJsonVal(fieldTypeKey), value)
+		return protocol.parseMap(fieldInfo.getJsonVal(fieldTypeKey), value)
 
 	case "set", "list":
-		return protocol.parseList(fieldInfo.GetJsonVal(fieldTypeKey), value)
+		return protocol.parseList(fieldInfo.getJsonVal(fieldTypeKey), value)
 	}
 
 	return errors.New("Unexpected type " + fieldType)
 }
 
 func (protocol *WIJSONProtocol) parseMap(fieldInfo Object, request interface{}) error {
-	if object, ok := ToJsonCheck(request); ok {
+	if object, ok := toJsonCheck(request); ok {
 		// fmt.Println("ReadMapBegin")
 
 		// Get the key type
-		keyType, err := protocol.StringToTypeId(fieldInfo.GetStringVal(keyTypeIdKey))
+		keyType, err := protocol.StringToTypeId(fieldInfo.getStringVal(keyTypeIdKey))
 		if err != nil {
 			return err
 		}
 
 		// Get the value type
-		valueType, err := protocol.StringToTypeId(fieldInfo.GetStringVal(valueTypeIdKey))
+		valueType, err := protocol.StringToTypeId(fieldInfo.getStringVal(valueTypeIdKey))
 		if err != nil {
 			return err
 		}
@@ -183,7 +183,7 @@ func (protocol *WIJSONProtocol) parseList(fieldInfo Object, request interface{})
 		// fmt.Println("ReadListBegin/ReadSetBegin")
 
 		// Get the element type of the list
-		elemType, err := protocol.StringToTypeId(fieldInfo.GetStringVal(elemTypeIdKey))
+		elemType, err := protocol.StringToTypeId(fieldInfo.getStringVal(elemTypeIdKey))
 		if err != nil {
 			return err
 		}
@@ -206,26 +206,26 @@ func (protocol *WIJSONProtocol) parseList(fieldInfo Object, request interface{})
 }
 
 func (protocol *WIJSONProtocol) parseStruct(fieldsList Array, request interface{}) error {
-	if object, ok := ToJsonCheck(request); ok {
+	if object, ok := toJsonCheck(request); ok {
 		// fmt.Println("ReadStructBegin", object)
 		for key, value := range object {
 			// fmt.Println("ReadFieldBegin")
 
 			// Get the information of the field (type, name, etc)
-			fieldInfo := fieldsList.FindInJsonArray(nameKey, key)
+			fieldInfo := fieldsList.findInJsonArray(nameKey, key)
 			if fieldInfo == nil {
 				// Field doesn't exist
 				return errors.New("Unexpected key " + key)
 			}
 
 			// Get the Thrift Type of the field
-			fieldType, err := protocol.StringToTypeId(fieldInfo.GetStringVal(typeIdKey))
+			fieldType, err := protocol.StringToTypeId(fieldInfo.getStringVal(typeIdKey))
 			if err != nil {
 				return err
 			}
 
 			// Add the name, type and key (1:, 2:, 3:, etc) to params
-			protocol.add(key, fieldType, fieldInfo.GetDefaultInt16Val(keyKey, 0))
+			protocol.add(key, fieldType, fieldInfo.getDefaultInt16Val(keyKey, 0))
 
 			// fmt.Println(key, fieldType, fieldInfo.GetInt16Val(keyKey))
 

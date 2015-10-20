@@ -72,14 +72,14 @@ func NewWIJSONProtocol(t thrift.TTransport, metadata Array, service string) *WIJ
 }
 
 func (protocol *WIJSONProtocol) getMessageTypeAndSeq(methodInfo Object) (thrift.TMessageType, int32) {
-	if protocol.request.HasKey(argumentsKey) {
-		if methodInfo != nil && methodInfo.GetBoolVal(onewayKey) {
+	if protocol.request.hasKey(argumentsKey) {
+		if methodInfo != nil && methodInfo.getBoolVal(onewayKey) {
 			return thrift.ONEWAY, 0
 		}
 		return thrift.CALL, 0
-	} else if protocol.request.HasKey(resultKey) {
+	} else if protocol.request.hasKey(resultKey) {
 		return thrift.REPLY, 1
-	} else if protocol.request.HasKey(exceptionKey) {
+	} else if protocol.request.hasKey(exceptionKey) {
 		return thrift.EXCEPTION, 1
 	} else {
 		return thrift.INVALID_TMESSAGE_TYPE, 0
@@ -179,13 +179,13 @@ func (protocol *WIJSONProtocol) ReadMessageBegin() (string, thrift.TMessageType,
 	}
 
 	// Get the method info corresponding to method being called
-	name := protocol.request.GetDefaultStringVal(methodKey, "")
+	name := protocol.request.getDefaultStringVal(methodKey, "")
 	methodInfo, methodInfoErr := protocol.getMethodInfo(protocol.service, name)
 	// Type Id tells whether it is a request (CALL) or response (REPLY) or error (EXCEPTION)
 	// Seq Id == 0 for CALL and 1 for REPLY, EXCEPTION always
 	typeId, seqId := protocol.getMessageTypeAndSeq(methodInfo)
 
-	if protocol.request.HasKey(argumentsKey) {
+	if protocol.request.hasKey(argumentsKey) {
 		/** CALL */
 
 		if methodInfoErr != nil {
@@ -197,8 +197,8 @@ func (protocol *WIJSONProtocol) ReadMessageBegin() (string, thrift.TMessageType,
 
 		// Parse out the arguments struct
 		// Send it the arguments struct in both the method metadata and the request
-		protocol.err = protocol.parseStruct(methodInfo.GetArrayVal(argumentsKey), protocol.request.GetJsonVal(argumentsKey))
-	} else if protocol.request.HasKey(resultKey) {
+		protocol.err = protocol.parseStruct(methodInfo.getArrayVal(argumentsKey), protocol.request.getJsonVal(argumentsKey))
+	} else if protocol.request.hasKey(resultKey) {
 		/** REPLY */
 
 		if methodInfoErr != nil {
@@ -208,12 +208,12 @@ func (protocol *WIJSONProtocol) ReadMessageBegin() (string, thrift.TMessageType,
 			return name, typeId, seqId, nil
 		}
 
-		result := protocol.request.GetJsonVal(resultKey)
+		result := protocol.request.getJsonVal(resultKey)
 
 		// The result will either have "success" or the name of the error that was thrown
-		if result.HasKey(successKey) {
+		if result.hasKey(successKey) {
 			// Figure out the return type
-			returnType, err := protocol.StringToTypeId(methodInfo.GetStringVal(returnTypeIdKey))
+			returnType, err := protocol.StringToTypeId(methodInfo.getStringVal(returnTypeIdKey))
 			if err != nil {
 				protocol.err = err
 			} else {
@@ -235,29 +235,29 @@ func (protocol *WIJSONProtocol) ReadMessageBegin() (string, thrift.TMessageType,
 				break
 			}
 
-			errInfo := methodInfo.GetArrayVal(exceptionsKey).FindInJsonArray(nameKey, errName)
+			errInfo := methodInfo.getArrayVal(exceptionsKey).findInJsonArray(nameKey, errName)
 			if errInfo == nil {
 				// Error doesn't exist in the Thrift definition
 				return "", thrift.INVALID_TMESSAGE_TYPE, 0, thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, errors.New("Unable to parse result"))
 			}
 			// Begin Parsing Error (which is just a struct)
-			protocol.add(errName, thrift.TType(thrift.STRUCT), errInfo.GetDefaultInt16Val(keyKey, 1))
+			protocol.add(errName, thrift.TType(thrift.STRUCT), errInfo.getDefaultInt16Val(keyKey, 1))
 			// Parse Error
-			protocol.err = protocol.parse(errInfo, result.GetJsonVal(errName), typeIdKey, typeKey)
+			protocol.err = protocol.parse(errInfo, result.getJsonVal(errName), typeIdKey, typeKey)
 			// Finish Parsing error
 			protocol.add("", thrift.TType(thrift.STOP), int16(-1))
 		}
 
-	} else if protocol.request.HasKey(exceptionKey) {
+	} else if protocol.request.hasKey(exceptionKey) {
 		// Error other than one defined in the method signature. It will have a string and an int32
 		// Add String field
 		protocol.add("", thrift.TType(thrift.STRING), int16(1))
 		// Parse string
-		protocol.add(protocol.request.GetJsonVal(exceptionKey).GetDefaultStringVal(messageKey, ""))
+		protocol.add(protocol.request.getJsonVal(exceptionKey).getDefaultStringVal(messageKey, ""))
 		// Add int32
 		protocol.add("", thrift.TType(thrift.I32), int16(2))
 		// Parse int32
-		protocol.add(protocol.request.GetJsonVal(exceptionKey).GetDefaultInt32Val(typeKey, thrift.UNKNOWN_APPLICATION_EXCEPTION))
+		protocol.add(protocol.request.getJsonVal(exceptionKey).getDefaultInt32Val(typeKey, thrift.UNKNOWN_APPLICATION_EXCEPTION))
 		// Finish Parsing
 		protocol.add("", thrift.TType(thrift.STOP), int16(-1))
 
