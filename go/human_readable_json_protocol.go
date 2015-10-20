@@ -36,12 +36,12 @@ const (
 	returnTypeKey   = "returnType"
 )
 
-type WIJSONProtocolFactory struct {
+type HumanReadableJsonProtocolFactory struct {
 	metadata Array
 	service  string
 }
 
-type WIJSONProtocol struct {
+type HumanReadableJsonProtocol struct {
 	trans    thrift.TTransport
 	oprot    *thrift.TJSONProtocol
 	request  Object
@@ -52,16 +52,16 @@ type WIJSONProtocol struct {
 	err    error
 }
 
-func NewWIJSONProtocolFactory(metadata Array, service string) *WIJSONProtocolFactory {
-	return &WIJSONProtocolFactory{metadata: metadata, service: service}
+func NewHumanReadableJsonProtocolFactory(metadata Array, service string) *HumanReadableJsonProtocolFactory {
+	return &HumanReadableJsonProtocolFactory{metadata: metadata, service: service}
 }
 
-func (p *WIJSONProtocolFactory) GetProtocol(trans thrift.TTransport) thrift.TProtocol {
-	return NewWIJSONProtocol(trans, p.metadata, p.service)
+func (p *HumanReadableJsonProtocolFactory) GetProtocol(trans thrift.TTransport) thrift.TProtocol {
+	return NewHumanReadableJsonProtocol(trans, p.metadata, p.service)
 }
 
-func NewWIJSONProtocol(t thrift.TTransport, metadata Array, service string) *WIJSONProtocol {
-	return &WIJSONProtocol{
+func NewHumanReadableJsonProtocol(t thrift.TTransport, metadata Array, service string) *HumanReadableJsonProtocol {
+	return &HumanReadableJsonProtocol{
 		trans:    t,
 		oprot:    thrift.NewTJSONProtocol(t),
 		metadata: metadata,
@@ -71,7 +71,7 @@ func NewWIJSONProtocol(t thrift.TTransport, metadata Array, service string) *WIJ
 	}
 }
 
-func (protocol *WIJSONProtocol) getMessageTypeAndSeq(methodInfo Object) (thrift.TMessageType, int32) {
+func (protocol *HumanReadableJsonProtocol) getMessageTypeAndSeq(methodInfo Object) (thrift.TMessageType, int32) {
 	if protocol.request.hasKey(argumentsKey) {
 		if methodInfo != nil && methodInfo.getBoolVal(onewayKey) {
 			return thrift.ONEWAY, 0
@@ -159,13 +159,13 @@ For all other errors:
 /**
 The parse*() methods parse out the information in the request JSON and add them to the
 params array in the EXACT SAME ORDER that the Read*() fields will be called by the
-processor on the WIJSONProtocol.
+processor on the HumanReadableJsonProtocol.
 
 So all we need to do when the Read*() methods are called is to return back how many ever arguments
 the method is expected to return from the top of the array
 */
 
-func (protocol *WIJSONProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, error) {
+func (protocol *HumanReadableJsonProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, error) {
 	// Read all data and parse out the JSON object
 	var data []byte
 	data, err := ioutil.ReadAll(protocol.trans)
@@ -271,107 +271,107 @@ func (protocol *WIJSONProtocol) ReadMessageBegin() (string, thrift.TMessageType,
 	return name, typeId, seqId, nil
 }
 
-func (protocol *WIJSONProtocol) ReadMessageEnd() error {
+func (protocol *HumanReadableJsonProtocol) ReadMessageEnd() error {
 	return nil
 }
 
-func (protocol *WIJSONProtocol) ReadStructBegin() (string, error) {
+func (protocol *HumanReadableJsonProtocol) ReadStructBegin() (string, error) {
 	// fmt.Println("ReadStructBegin")
 	return "", protocol.err
 }
 
-func (protocol *WIJSONProtocol) ReadStructEnd() error {
+func (protocol *HumanReadableJsonProtocol) ReadStructEnd() error {
 	// fmt.Println("ReadStructEnd")
 	return nil
 }
 
-func (protocol *WIJSONProtocol) ReadFieldBegin() (string, thrift.TType, int16, error) {
+func (protocol *HumanReadableJsonProtocol) ReadFieldBegin() (string, thrift.TType, int16, error) {
 	p := protocol.slice(3)
 	// fmt.Println("ReadFieldBegin", p)
 	return p[0].(string), p[1].(thrift.TType), p[2].(int16), nil
 }
 
-func (protocol *WIJSONProtocol) ReadFieldEnd() error {
+func (protocol *HumanReadableJsonProtocol) ReadFieldEnd() error {
 	// fmt.Println("ReadFieldEnd")
 	return nil
 }
 
-func (protocol *WIJSONProtocol) ReadMapBegin() (thrift.TType, thrift.TType, int, error) {
+func (protocol *HumanReadableJsonProtocol) ReadMapBegin() (thrift.TType, thrift.TType, int, error) {
 	p := protocol.slice(3)
 	// fmt.Println("ReadMapBegin", p)
 	return p[0].(thrift.TType), p[1].(thrift.TType), p[2].(int), nil
 }
 
-func (protocol *WIJSONProtocol) ReadMapEnd() error {
+func (protocol *HumanReadableJsonProtocol) ReadMapEnd() error {
 	// fmt.Println("ReadMapEnd")
 	return nil
 }
 
-func (protocol *WIJSONProtocol) ReadListBegin() (thrift.TType, int, error) {
+func (protocol *HumanReadableJsonProtocol) ReadListBegin() (thrift.TType, int, error) {
 	p := protocol.slice(2)
 	// fmt.Println("ReadListBegin", p)
 	return p[0].(thrift.TType), p[1].(int), nil
 }
 
-func (protocol *WIJSONProtocol) ReadListEnd() error {
+func (protocol *HumanReadableJsonProtocol) ReadListEnd() error {
 	// fmt.Println("ReadListEnd")
 	return nil
 }
 
-func (protocol *WIJSONProtocol) ReadSetBegin() (elemType thrift.TType, size int, err error) {
+func (protocol *HumanReadableJsonProtocol) ReadSetBegin() (elemType thrift.TType, size int, err error) {
 	p := protocol.slice(2)
 	// fmt.Println("ReadSetBegin")
 	return p[0].(thrift.TType), p[1].(int), nil
 }
 
-func (protocol *WIJSONProtocol) ReadSetEnd() error {
+func (protocol *HumanReadableJsonProtocol) ReadSetEnd() error {
 	// fmt.Println("ReadSetEnd")
 	return nil
 }
 
-func (protocol *WIJSONProtocol) ReadBool() (bool, error) {
+func (protocol *HumanReadableJsonProtocol) ReadBool() (bool, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadBool", p)
 	return p[0].(bool), nil
 }
 
-func (protocol *WIJSONProtocol) ReadByte() (byte, error) {
+func (protocol *HumanReadableJsonProtocol) ReadByte() (byte, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadByte", p)
 	return p[0].(byte), nil
 }
 
-func (protocol *WIJSONProtocol) ReadI16() (int16, error) {
+func (protocol *HumanReadableJsonProtocol) ReadI16() (int16, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadI16", p)
 	return p[0].(int16), nil
 }
 
-func (protocol *WIJSONProtocol) ReadI32() (int32, error) {
+func (protocol *HumanReadableJsonProtocol) ReadI32() (int32, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadI32", p)
 	return p[0].(int32), nil
 }
 
-func (protocol *WIJSONProtocol) ReadI64() (int64, error) {
+func (protocol *HumanReadableJsonProtocol) ReadI64() (int64, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadI64", p)
 	return p[0].(int64), nil
 }
 
-func (protocol *WIJSONProtocol) ReadDouble() (float64, error) {
+func (protocol *HumanReadableJsonProtocol) ReadDouble() (float64, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadDouble", p)
 	return p[0].(float64), nil
 }
 
-func (protocol *WIJSONProtocol) ReadString() (string, error) {
+func (protocol *HumanReadableJsonProtocol) ReadString() (string, error) {
 	p := protocol.slice(1)
 	// fmt.Println("ReadString", p)
 	return p[0].(string), nil
 }
 
-func (protocol *WIJSONProtocol) ReadBinary() ([]byte, error) {
+func (protocol *HumanReadableJsonProtocol) ReadBinary() ([]byte, error) {
 	// fmt.Println("ReadBinary")
 	v, err := protocol.ReadString()
 	if err != nil {
@@ -381,19 +381,19 @@ func (protocol *WIJSONProtocol) ReadBinary() ([]byte, error) {
 	}
 }
 
-func (protocol *WIJSONProtocol) Flush() (err error) {
+func (protocol *HumanReadableJsonProtocol) Flush() (err error) {
 	return protocol.oprot.Flush()
 }
 
-func (protocol *WIJSONProtocol) Skip(fieldType thrift.TType) (err error) {
+func (protocol *HumanReadableJsonProtocol) Skip(fieldType thrift.TType) (err error) {
 	return thrift.SkipDefaultDepth(protocol, fieldType)
 }
 
-func (protocol *WIJSONProtocol) Transport() thrift.TTransport {
+func (protocol *HumanReadableJsonProtocol) Transport() thrift.TTransport {
 	return protocol.trans
 }
 
-func (protocol *WIJSONProtocol) WriteMessageBegin(name string, typeId thrift.TMessageType, seqid int32) error {
+func (protocol *HumanReadableJsonProtocol) WriteMessageBegin(name string, typeId thrift.TMessageType, seqid int32) error {
 	err := protocol.oprot.OutputObjectBegin()
 	if err != nil {
 		return err
@@ -432,82 +432,82 @@ func (protocol *WIJSONProtocol) WriteMessageBegin(name string, typeId thrift.TMe
 
 // Simply use the simple json protocol to write out the
 // JSON
-func (protocol *WIJSONProtocol) WriteMessageEnd() error {
+func (protocol *HumanReadableJsonProtocol) WriteMessageEnd() error {
 	return protocol.oprot.OutputObjectEnd()
 }
 
-func (protocol *WIJSONProtocol) WriteStructBegin(name string) error {
+func (protocol *HumanReadableJsonProtocol) WriteStructBegin(name string) error {
 	return protocol.oprot.OutputObjectBegin()
 }
 
-func (protocol *WIJSONProtocol) WriteStructEnd() error {
+func (protocol *HumanReadableJsonProtocol) WriteStructEnd() error {
 	return protocol.oprot.OutputObjectEnd()
 }
 
-func (protocol *WIJSONProtocol) WriteFieldBegin(name string, typeId thrift.TType, id int16) error {
+func (protocol *HumanReadableJsonProtocol) WriteFieldBegin(name string, typeId thrift.TType, id int16) error {
 	return protocol.oprot.WriteString(name)
 }
 
-func (protocol *WIJSONProtocol) WriteFieldEnd() error {
+func (protocol *HumanReadableJsonProtocol) WriteFieldEnd() error {
 	return nil
 }
 
-func (protocol *WIJSONProtocol) WriteFieldStop() error {
+func (protocol *HumanReadableJsonProtocol) WriteFieldStop() error {
 	return nil
 }
 
-func (protocol *WIJSONProtocol) WriteMapBegin(keyType thrift.TType, valueType thrift.TType, size int) error {
+func (protocol *HumanReadableJsonProtocol) WriteMapBegin(keyType thrift.TType, valueType thrift.TType, size int) error {
 	return protocol.oprot.OutputObjectBegin()
 }
 
-func (protocol *WIJSONProtocol) WriteMapEnd() error {
+func (protocol *HumanReadableJsonProtocol) WriteMapEnd() error {
 	return protocol.oprot.OutputObjectEnd()
 }
 
-func (protocol *WIJSONProtocol) WriteListBegin(elemType thrift.TType, size int) error {
+func (protocol *HumanReadableJsonProtocol) WriteListBegin(elemType thrift.TType, size int) error {
 	return protocol.oprot.OutputListBegin()
 }
 
-func (protocol *WIJSONProtocol) WriteListEnd() error {
+func (protocol *HumanReadableJsonProtocol) WriteListEnd() error {
 	return protocol.oprot.OutputListEnd()
 }
 
-func (protocol *WIJSONProtocol) WriteSetBegin(elemType thrift.TType, size int) error {
+func (protocol *HumanReadableJsonProtocol) WriteSetBegin(elemType thrift.TType, size int) error {
 	return protocol.oprot.OutputListBegin()
 }
 
-func (protocol *WIJSONProtocol) WriteSetEnd() error {
+func (protocol *HumanReadableJsonProtocol) WriteSetEnd() error {
 	return protocol.oprot.OutputListEnd()
 }
 
-func (protocol *WIJSONProtocol) WriteBool(value bool) error {
+func (protocol *HumanReadableJsonProtocol) WriteBool(value bool) error {
 	return protocol.oprot.OutputBool(value)
 }
 
-func (protocol *WIJSONProtocol) WriteByte(value byte) error {
+func (protocol *HumanReadableJsonProtocol) WriteByte(value byte) error {
 	return protocol.oprot.WriteByte(value)
 }
 
-func (protocol *WIJSONProtocol) WriteI16(value int16) error {
+func (protocol *HumanReadableJsonProtocol) WriteI16(value int16) error {
 	return protocol.oprot.WriteI16(value)
 }
 
-func (protocol *WIJSONProtocol) WriteI32(value int32) error {
+func (protocol *HumanReadableJsonProtocol) WriteI32(value int32) error {
 	return protocol.oprot.WriteI32(value)
 }
 
-func (protocol *WIJSONProtocol) WriteI64(value int64) error {
+func (protocol *HumanReadableJsonProtocol) WriteI64(value int64) error {
 	return protocol.oprot.WriteI64(value)
 }
 
-func (protocol *WIJSONProtocol) WriteDouble(value float64) error {
+func (protocol *HumanReadableJsonProtocol) WriteDouble(value float64) error {
 	return protocol.oprot.WriteDouble(value)
 }
 
-func (protocol *WIJSONProtocol) WriteString(value string) error {
+func (protocol *HumanReadableJsonProtocol) WriteString(value string) error {
 	return protocol.oprot.WriteString(value)
 }
 
-func (protocol *WIJSONProtocol) WriteBinary(value []byte) error {
+func (protocol *HumanReadableJsonProtocol) WriteBinary(value []byte) error {
 	return protocol.oprot.WriteBinary(value)
 }

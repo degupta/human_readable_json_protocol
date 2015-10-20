@@ -40,7 +40,7 @@ func toJsonCheck(val interface{}) (Object, bool) {
 	return nil, false
 }
 
-func ToJsonArrayCheck(val interface{}) (Array, bool) {
+func toJsonArrayCheck(val interface{}) (Array, bool) {
 	switch vx := val.(type) {
 	case Array:
 		return vx, true

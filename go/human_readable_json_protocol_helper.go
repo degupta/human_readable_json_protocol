@@ -8,7 +8,7 @@ import (
 	"github.com/wearableintelligence/thrift/lib/go/thrift"
 )
 
-func (protocol *WIJSONProtocol) getMethodInfo(serviceName, methodName string) (Object, error) {
+func (protocol *HumanReadableJsonProtocol) getMethodInfo(serviceName, methodName string) (Object, error) {
 	for _, v := range protocol.metadata {
 		// For each package in the metadata
 		pkg, ok := toJsonCheck(v)
@@ -33,7 +33,7 @@ func (protocol *WIJSONProtocol) getMethodInfo(serviceName, methodName string) (O
 	return nil, errors.New(serviceName + "::" + methodName + " not found!")
 }
 
-func (protocol *WIJSONProtocol) getInfo(class string) Object {
+func (protocol *HumanReadableJsonProtocol) getInfo(class string) Object {
 	parts := strings.Split(class, ".")
 	// Find the package we are looking for
 	program := protocol.metadata.findInJsonArray(nameKey, parts[0])
@@ -41,7 +41,7 @@ func (protocol *WIJSONProtocol) getInfo(class string) Object {
 	return program.getArrayVal(structsKey).findInJsonArray(nameKey, parts[1])
 }
 
-func (protocol *WIJSONProtocol) getStructFieldList(elemType Object) Array {
+func (protocol *HumanReadableJsonProtocol) getStructFieldList(elemType Object) Array {
 	// Get the struct we are looking for and then get the list of fields in the struct
 	return protocol.getInfo(elemType.getStringVal(classKey)).getArrayVal(fieldsKey)
 }
@@ -49,13 +49,13 @@ func (protocol *WIJSONProtocol) getStructFieldList(elemType Object) Array {
 /**
 The parse*() methods parse out the information in the request JSON and add them to the
 params array in the EXACT SAME ORDER that the Read*() fields will be called by the
-processor on the WIJSONProtocol.
+processor on the HumanReadableJsonProtocol.
 
 So all we need to do when the Read*() methods are called is to return back how many ever arguments
 the method is expected to return from the top of the array
 */
 
-func (protocol *WIJSONProtocol) parse(fieldInfo Object, value interface{}, fieldTypeIdKey, fieldTypeKey string) error {
+func (protocol *HumanReadableJsonProtocol) parse(fieldInfo Object, value interface{}, fieldTypeIdKey, fieldTypeKey string) error {
 	// Get the type of the value we expect
 	// Check if value is of that type
 	// and then add it to the list of arguments
@@ -138,7 +138,7 @@ func (protocol *WIJSONProtocol) parse(fieldInfo Object, value interface{}, field
 	return errors.New("Unexpected type " + fieldType)
 }
 
-func (protocol *WIJSONProtocol) parseMap(fieldInfo Object, request interface{}) error {
+func (protocol *HumanReadableJsonProtocol) parseMap(fieldInfo Object, request interface{}) error {
 	if object, ok := toJsonCheck(request); ok {
 		// fmt.Println("ReadMapBegin")
 
@@ -178,8 +178,8 @@ func (protocol *WIJSONProtocol) parseMap(fieldInfo Object, request interface{}) 
 	}
 }
 
-func (protocol *WIJSONProtocol) parseList(fieldInfo Object, request interface{}) error {
-	if array, ok := ToJsonArrayCheck(request); ok {
+func (protocol *HumanReadableJsonProtocol) parseList(fieldInfo Object, request interface{}) error {
+	if array, ok := toJsonArrayCheck(request); ok {
 		// fmt.Println("ReadListBegin/ReadSetBegin")
 
 		// Get the element type of the list
@@ -205,7 +205,7 @@ func (protocol *WIJSONProtocol) parseList(fieldInfo Object, request interface{})
 	}
 }
 
-func (protocol *WIJSONProtocol) parseStruct(fieldsList Array, request interface{}) error {
+func (protocol *HumanReadableJsonProtocol) parseStruct(fieldsList Array, request interface{}) error {
 	if object, ok := toJsonCheck(request); ok {
 		// fmt.Println("ReadStructBegin", object)
 		for key, value := range object {
@@ -246,17 +246,17 @@ func (protocol *WIJSONProtocol) parseStruct(fieldsList Array, request interface{
 	}
 }
 
-func (protocol *WIJSONProtocol) add(elem ...interface{}) {
+func (protocol *HumanReadableJsonProtocol) add(elem ...interface{}) {
 	protocol.params = append(protocol.params, elem...)
 }
 
-func (protocol *WIJSONProtocol) slice(num int) []interface{} {
+func (protocol *HumanReadableJsonProtocol) slice(num int) []interface{} {
 	p := protocol.params[0:num]
 	protocol.params = protocol.params[num:len(protocol.params)]
 	return p
 }
 
-func (protocol *WIJSONProtocol) StringToTypeId(fieldType string) (thrift.TType, error) {
+func (protocol *HumanReadableJsonProtocol) StringToTypeId(fieldType string) (thrift.TType, error) {
 	switch fieldType {
 	case "bool":
 		return thrift.TType(thrift.BOOL), nil

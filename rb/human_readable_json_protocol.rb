@@ -1,7 +1,7 @@
 require 'thrift'
 require 'json'
 
-class WIJsonProtocol < Thrift::BaseProtocol
+class HumanReadableJsonProtocol < Thrift::BaseProtocol
   METHOD_KEY         = "method"
   SERVICES_KEY       = "services"
   NAME_KEY           = "name"
@@ -28,7 +28,7 @@ class WIJsonProtocol < Thrift::BaseProtocol
   RETURN_TYPE_ID_KEY = "returnTypeId"
   RETURN_TYPE_KEY    = "returnType"
 
-  class WIJsonProtocolFactory < Thrift::BaseProtocolFactory
+  class HumanReadableJsonProtocolFactory < Thrift::BaseProtocolFactory
     def initialize(dir)
       @packages_metadata = []
       Dir.foreach(dir) do |fname|
@@ -39,7 +39,7 @@ class WIJsonProtocol < Thrift::BaseProtocol
     end
 
     def get_protocol(trans, service, debug = false)
-      WIJsonProtocol.new(trans, service, @packages_metadata, debug)
+      HumanReadableJsonProtocol.new(trans, service, @packages_metadata, debug)
     end
   end
 
