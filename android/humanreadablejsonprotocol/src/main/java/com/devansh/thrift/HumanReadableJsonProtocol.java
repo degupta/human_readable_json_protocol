@@ -13,10 +13,15 @@ import org.apache.thrift.protocol.TSet;
 import org.apache.thrift.protocol.TStruct;
 import org.apache.thrift.protocol.TType;
 import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -45,7 +50,7 @@ public class HumanReadableJsonProtocol extends TProtocol {
     private static final String VALUE_TYPE_ID_KEY = "valueTypeId";
     private static final String VALUE_TYPE_KEY = "valueType";
     private static final String ELEM_TYPE_ID_KEY = "elemTypeId";
-    private static final String ELEM_TYPE_KEY = "elemType"
+    private static final String ELEM_TYPE_KEY = "elemType";
     private static final String RETURN_TYPE_ID_KEY = "returnTypeId";
     private static final String RETURN_TYPE_KEY = "returnType";
 
@@ -69,6 +74,27 @@ public class HumanReadableJsonProtocol extends TProtocol {
             JSONObject obj = arr.getJSONObject(i);
             if (value.equals(obj.getString(key))) {
                 return obj;
+            }
+        }
+
+        return null;
+    }
+
+    private JSONObject get_method_info(String service_name,
+                                       String method_name) throws JSONException {
+        for (int i = 0; i < metadata.length(); i++) {
+            JSONObject v = metadata.getJSONObject(i);
+            if (v.has(SERVICES_KEY)) {
+                JSONObject svc = find_in_json_array(v.getJSONArray(SERVICES_KEY), NAME_KEY,
+                        v.getString(NAME_KEY) + "." + service_name);
+                if (svc != null) {
+                    JSONObject method_info =
+                            find_in_json_array(svc.getJSONArray(FUNCTIONS_KEY), NAME_KEY,
+                                    method_name);
+                    if (method_info != null) {
+                        return method_info;
+                    }
+                }
             }
         }
 
@@ -263,7 +289,106 @@ public class HumanReadableJsonProtocol extends TProtocol {
 
     @Override
     public TMessage readMessageBegin() throws TException {
-        return null;
+        try {
+            return readMessageBeginHelper();
+        } catch (Exception e) {
+            throw new TException(e);
+        }
+    }
+
+    private TMessage readMessageBeginHelper() throws JSONException, TProtocolException, IOException {
+        String s = null;
+
+        StringWriter writer = new StringWriter();
+        char[] buffer = new char[1028];
+        InputStreamReader input = new InputStreamReader(new InputStream() {
+            private byte[] buf = new byte[1];
+
+            @Override
+            public int read() throws IOException {
+                try {
+                    int amt = getTransport().read(buf, 0, 1);
+                    if (amt <= 0) {
+                        return -1;
+                    } else {
+                        return buf[0] & 0xFF;
+                    }
+                } catch (TTransportException e) {
+                    return -1;
+                }
+            }
+
+        }, "UTF-8");
+
+        int n = 0;
+        while (-1 != (n = input.read(buffer))) {
+            writer.write(buffer, 0, n);
+        }
+
+        JSONObject request = new JSONObject(writer.toString());
+
+        String name = request.getString(METHOD_KEY);
+        JSONObject method_info = get_method_info(service, name);
+        byte[] message_type_and_seq = get_message_type_and_seq(request, method_info);
+        byte type_id = message_type_and_seq[0];
+        byte seq_id = message_type_and_seq[1];
+
+        if (request.has(ARGUMENTS_KEY)) {
+            if (method_info == null) {
+                add("", TType.STOP, -1);
+                return new TMessage(name, type_id, seq_id);
+            }
+
+            parse_struct(method_info.getJSONArray(ARGUMENTS_KEY), request.get(ARGUMENTS_KEY));
+        } else if (request.has(RESULT_KEY)) {
+            if (method_info == null) {
+                add("", TType.STOP, -1);
+                return new TMessage(name, type_id, seq_id);
+            }
+
+            JSONObject result = request.getJSONObject(RESULT_KEY);
+            if (result.has(SUCCESS_KEY)) {
+                try {
+                    byte return_type = string_to_type_id(method_info.getString(RETURN_TYPE_ID_KEY));
+                    add("", return_type, 0);
+                    parse(method_info, result.get(SUCCESS_KEY), RETURN_TYPE_ID_KEY,
+                            RETURN_TYPE_KEY);
+                    add("", TType.STOP, -1);
+                } catch (Exception e) {
+                    err = new TException(e);
+                }
+            } else if (result.length() == 0) {
+                add("", TType.STOP, -1);
+            } else {
+                String err_name = result.keys().next();
+                JSONObject err_info =
+                        find_in_json_array(method_info.getJSONArray(EXCEPTIONS_KEY), NAME_KEY,
+                                err_name);
+                if (err_info == null) {
+                    throw new TProtocolException(TProtocolException.INVALID_DATA,
+                            new Exception("Unable to parse result"));
+                }
+                add(err_name, TType.STRUCT, err_info.getInt(KEY_KEY));
+
+                try {
+                    parse(err_info, result.get(err_name), TYPE_ID_KEY, TYPE_KEY);
+                } catch (Exception e) {
+                    err = new TException(e);
+                }
+                add("", TType.STOP, -1);
+            }
+        } else if (request.has(EXCEPTION_KEY)) {
+            add("", TType.STRING, 1);
+            add(request.getJSONObject(EXCEPTION_KEY).optString(MESSAGE_KEY, ""));
+            add("", TType.I32, 2);
+            add(request.getJSONObject(EXCEPTION_KEY).optInt(TYPE_KEY, TProtocolException.UNKNOWN));
+            add("", TType.STOP, -1);
+        } else {
+            throw new TProtocolException(TProtocolException.INVALID_DATA,
+                    new Exception("Unable to parse result"));
+        }
+
+        return new TMessage(name, type_id, seq_id);
     }
 
     @Override
