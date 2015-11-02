@@ -98,3 +98,9 @@ For all other errors:
     }
 }
 ```
+
+
+### Modifying the Thrift source code
+You will need to make a minor change to the Thrift JSON metadata generator in order for this to work. You can look at the diff of the change that is required over here: [JSON Generator Diff](diff_for_t_json_generator_cc.diff).
+
+All this change does it to make sure when the class type is written out it displays as *package.class_name* instead of simply *class_name*.
