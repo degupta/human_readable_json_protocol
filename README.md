@@ -1,6 +1,13 @@
 # Human Readable Json Protocol
 A way to convert Thrift Services and Functions into Human Readable JSON
 
+> So, one problem I have heard is, “Hey, so we are publishing our Thrift APIs to third party vendors, and we need it to be easy to use.” Now, you either:
+> 1. Expose the Thrift endpoints and coach your API consumers on Thrift and help them debug any issues.
+> 2. You maintain a library that is wrapper around the different Thrift services for each language/platform you want to support.
+> 3. Create a way to manually convert between human readable JSON to Thrift and vice versa, and maintain it for every single struct, service & function.
+
+> If these options sound unappealing to you, you’re right — they can be a lot of work. But is there another way?
+
 For a simple Thrift service like so:
 
 ```
