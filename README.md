@@ -126,7 +126,7 @@ You can also just use this Thrift Binary (v0.10.0): [thrift](thrift)
 For example in Java:
 
 ```java
-public static final JSONArray HUMAN_JSON_THRIFT_METADATA = readAllFiles();
+public static final JSONArray HUMAN_JSON_THRIFT_METADATA = readAllFiles("src/main/resources/thrift-json");
 
 private static JSONArray readAllFiles(String jsonMetadataPath) {
     File[] jsonFiles = new File[0];
