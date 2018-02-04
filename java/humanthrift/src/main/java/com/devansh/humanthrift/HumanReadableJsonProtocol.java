@@ -4,15 +4,12 @@ package com.devansh.humanthrift;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.*;
 import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -363,33 +360,23 @@ public class HumanReadableJsonProtocol extends TProtocol {
     }
 
     private JSONObject readAllFromTransport() throws JSONException, IOException {
-        StringWriter writer = new StringWriter();
-        char[] buffer = new char[1028];
-        InputStreamReader input = new InputStreamReader(new InputStream() {
-            private byte[] buf = new byte[1];
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
-            @Override
-            public int read() throws IOException {
-                try {
-                    int amt = getTransport().read(buf, 0, 1);
-                    if (amt <= 0) {
-                        return -1;
-                    } else {
-                        return buf[0] & 0xFF;
-                    }
-                } catch (TTransportException e) {
-                    return -1;
+        TTransport transport = getTransport();
+        byte buffer[] = new byte[1024];
+        while (true) {
+            try {
+                int amt = transport.read(buffer, 0, buffer.length);
+                if (amt <= 0) {
+                    break;
                 }
+                byteArrayOutputStream.write(buffer, 0, amt);
+            } catch (Exception e) {
+                break;
             }
-
-        }, "UTF-8");
-
-        int n = 0;
-        while (-1 != (n = input.read(buffer))) {
-            writer.write(buffer, 0, n);
         }
 
-        return new JSONObject(writer.toString());
+        return new JSONObject(byteArrayOutputStream.toString("UTF-8"));
     }
 
     private TMessage readMessageBeginHelper() throws JSONException, TProtocolException, IOException {
