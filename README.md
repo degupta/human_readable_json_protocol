@@ -113,7 +113,7 @@ For all other errors:
 
 All this change does it to make sure when the class type is written out it displays as *package.class_name* instead of simply *class_name*.
 
-You can also just use this Thrift Binary (v0.10.0): [thrift](thrift)
+__You can also just use this Thrift Binary (v0.10.0): [thrift](thrift)__
 
 2. Generate JSON using Thrift with the `full_name` option:
 
@@ -157,4 +157,81 @@ private static JSONArray readAllFiles(String jsonMetadataPath) {
 ```java
 String serviceName = "AuthenticationService"; // The exact name of the service
 new HumanReadableJsonProtocol.Factory(HumanReadableJsonHelpers.HUMAN_JSON_THRIFT_METADATA, serviceName).getProtocol(transport);
+```
+
+
+## Example
+
+1. Generate the JSON
+
+```
+./thrift -r -out java/humanthrift/src/main/resources/thrift-json -gen json:full_name auth.thrift
+```
+
+2. Generate the Java files:
+
+```
+./thrift -r -out java/humanthrift/src/main/java/  -gen java:generated_annotations=undated auth.thrift
+```
+
+3. Follow the example in [Main.java](java/humanthrift/src/main/java/com/devansh/humanthrift/Main.java)
+
+```java
+public static void main(String[] args) throws Exception {
+    // First Read in all the Metadata
+    JSONArray jsonMetadata = HumanReadableJsonHelpers.readAllFiles("src/main/resources/thrift-json");
+
+    // Next create the Factory, pass in the exact name - AuthenticationService
+    HumanReadableJsonProtocol.Factory factory = new HumanReadableJsonProtocol.Factory(jsonMetadata,
+            "AuthenticationService");
+
+    // Using a Memory Buffer to show how the request is serialized, but you can use any transport you want
+    TMemoryBuffer memoryBuffer = new TMemoryBuffer(1024);
+    AuthenticationService.Client client = new AuthenticationService.Client(factory.getProtocol(memoryBuffer));
+    try {
+        client.login("devansh@devash.com", "p@$$w0rd");
+    } catch (Exception e) {
+        // Ignore error, its just saying there is no response (since we don't have a server)
+    }
+
+    String request = memoryBuffer.toString("UTF-8");
+    System.out.println(request);
+
+    TMemoryBuffer memoryBufferResp = new TMemoryBuffer(1024);
+    getProcessor().process(factory.getProtocol(new TMemoryInputTransport(request.getBytes())),
+            factory.getProtocol(memoryBufferResp));
+
+    String response = memoryBufferResp.toString("UTF-8");
+    System.out.println(response);
+}
+
+private static AuthenticationService.Processor getProcessor() {
+    return new AuthenticationService.Processor<>(new AuthenticationService.Iface() {
+        @Override
+        public LoginResult login(String email, String password) throws SystemException, TException {
+            if (email.equals("devansh@devash.com") && password.equals("p@$$w0rd")) {
+                return new LoginResult()
+                        .setAuthToken("ABCDE")
+                        .setCurrentUser(new User()
+                                .setId("1")
+                                .setEmail("devansh@devash.com")
+                                .setName("Devansh Gupta")
+                                .setValidatedAt(System.currentTimeMillis() / 1000));
+            } else {
+                throw new SystemException(401, "Unknown User");
+            }
+        }
+    });
+}
+```
+
+Output:
+
+```
+Request:
+{"method":"login","arguments":{"email":"devansh@devash.com","password":"p@$$w0rd"}}
+
+Response:
+{"method":"login","result":{"success":{"authToken":"ABCDE","currentUser":{"id":"1","email":"devansh@devash.com","name":"Devansh Gupta","validatedAt":1517738975}}}}
+
 ```
